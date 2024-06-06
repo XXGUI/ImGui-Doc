@@ -165,6 +165,10 @@
     说明：
       label：按钮显示的文本，也是标识
       size：按钮的大小，ImVec2代表宽高
+    调用示例：
+      if(ImGui::Button("按钮文本",ImVec2(100,50))){
+        //点击后调用
+      }
   ## bool ImGui::InputText：文本输入框
     参数：const char label, char buf, size_t buf_size, ImGuiInputTextFlags flags = 0
     返回值：如果文本被修改，则返回 true。
@@ -179,6 +183,11 @@
     说明：
       label：复选框旁边显示的标签
       v：复选框状态
+    调用示例：
+      bool 复选框值=false;
+      if(ImGui::Checkbox("复选框",复选框值)){
+        //点击后调用
+      }
   ## bool ImGui::SliderFloat：浮点滑块
     参数：const char label, float v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f
     返回值：如果滑动条的值被修改，则返回 true。
@@ -189,6 +198,9 @@
       v_max：滑动条的最大值。
       format：显示值的格式化字符串。
       power：滑动条的速度。
+    调用示例：
+      float 滑块值=0;
+      ImGui::SliderFloat("滑块",滑块值,0,10);
 ## void ImGui::Image：图片控件
     参数：ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col
     说明：

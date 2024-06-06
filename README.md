@@ -6,6 +6,10 @@
       id：唯一标识
       p_open：窗口是否（默认打开）
       flags：窗口属性，如是否无背景，拖拽，滚动，接收点击等
+    调用示例：
+      ImGui::Begin("窗口", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground);
+        // 其他内容
+      ImGui::End();
   ## void ImGui::End：结束父窗口，和ImGui::Begin一起成对出现
   ## bool ImGui::BeginChild：创建子窗口，写在父窗口内
     参数：const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags
@@ -14,34 +18,147 @@
       str_id：唯一标识
       size_arg：窗口大小，ImVec2代表宽高
       flags：窗口属性，如是否无背景，拖拽，滚动，接收点击等
+    调用示例：
+      ImGui::BeginChild("子窗口", ImVec2(500, 200));
+       // 其他内容
+      ImGui::EndChild();
   ## void ImGui::EndChild：结束子窗口，跟创建子窗口成对出现
   ## void ImGui::SetCursorPos：设置窗口坐标
     参数：const ImVec2& local_pos
     说明：local_pos：X，Y坐标的位置
+    调用示例：
+      ImGui::Begin("窗口", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground);
+        ImGui::SetCursorPos(ImVec2((screen_x/2)-250, 0));//给子窗口设置以父窗口为开始坐标的固定坐标
+        ImGui::BeginChild("子窗口", ImVec2(500, 200));
+         // 其他内容
+        ImGui::EndChild();
+      ImGui::End();
   ## void ImGui::PushStyleColor：设置颜色
     参数：ImGuiCol idx, const ImVec4& col
     说明：
       idx：控件，例如：ImGuiCol_ChildBg，ImGuiCol_Text
       col：颜色，类型是ImVec4-例如：ImVec4(0, 0, 0, 0)透明，ImVec4(1,1,1,1)白色，ImVec4(1.0f, 0.831f, 0.623f, 1.0f)亮黄色
+    调用示例：
+      ImGui::Begin("窗口", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0,0,0,1));//给子窗口设置黑色背景颜色
+        ImGui::BeginChild("子窗口", ImVec2(500, 200));
+         // 其他内容
+        ImGui::EndChild();
+      ImGui::End();
   ## void ImGui::PushStyleVar：设置样式
     参数：ImGuiStyleVar idx, float val
     说明：
       idx：控件，例如：ImGuiStyleVar_ChildRounding
       val：设置控件的具体值
+    调用示例：
+      ImGui::Begin("窗口", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f);//给子窗口设置边框圆角
+        ImGui::BeginChild("子窗口", ImVec2(500, 200));
+         // 其他内容
+        ImGui::EndChild();
+      ImGui::End();
   ## void ImGui::SameLine：水平布局
     参数：float offset_from_start_x, float spacing_w
     说明：
       offset_from_start_x：靠窗口左边距离多少个像素，默认为上一个控件坐标后的20个像素点
       spacing_w：如果pos_x==0，则使用默认间距；如果pos_x！=，则不使用间距0
+    调用示例：
+      {
+        ImGui::Text("11111");
+        ImGui::SameLine();
+        ImGui::Text("2222");//这里的2222会显示在1111后面是水平显示
+        ImGui::SameLine(100);//这里会让333显示在窗口开始后的100个像素的位置
+        ImGui::Text("333");
+      }
   ## void ImGui::NewLine：换行，在这个后面写的控件会换一行显示
+    调用示例：
+      {
+        ImGui::Text("11111");
+        ImGui::NewLine();
+        ImGui::Text("2222");//这里的2222会显示在1111下面一行
+      }
   ## void ImGui::Dummy：换行，可以设置换行的宽高度
     参数：const ImVec2& size
     说明：size：宽高
-  
+    调用示例：
+      {
+        ImGui::Text("11111");
+        ImGui::Dummy(100,100);
+        ImGui::Text("2222");//这里的2222会显示在1111下面一行,间隔是100像素点
+      }
+  ## void SetNextWindowPos：设置下一个窗口位置。在Begin（）之前调用
+    参数：const ImVec2& pos, ImGuiCond cond = 0, const ImVec2& pivot = ImVec2(0, 0)
+    说明：
+      pos：窗口的坐标点，例如ImVec2(100,100)
+      cond：条件，用于控制何时应用位置设置
+      pivot：窗口位置的枢轴点
+  ## void SetNextWindowSize：设置下一个窗口大小。将轴设置为0.0f以强制在此轴上进行自动拟合。Begin（）之前的调用
+    参数：const ImVec2& pos, ImGuiCond cond = 0
+    说明：
+      pos：窗口的坐标点，例如ImVec2(100,100)
+      cond：条件，用于控制何时应用位置设置
+  ## void SetNextWindowSizeConstraints：设置下一个窗口大小限制。在X/Y轴上使用-1、-1可以保留当前大小。尺寸将向下取整。使用回调来应用非琐碎的编程约束。
+    参数：const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback = NULL, void* custom_callback_data = NULL
+    说明：
+      size_min：窗口最小大小。
+      size_max：窗口最大大小。
+      custom_callback：自定义回调函数。
+      custom_callback_data：自定义回调函数的数据。
+  ## void SetNextWindowContentSize：设置下一个窗口的内容大小（~可滚动的客户端区域，强制执行滚动条的范围）。不包括窗口装饰（标题栏、菜单栏等），也不包括WindowPadding。将轴设置为0.0f以使其保持自动。Begin（）之前的调用
+    参数：const ImVec2& size
+    说明：内容的目标大小
+  ## void SetNextWindowCollapsed：设置下一个窗口的折叠状态。必须在 Begin() 之前调用
+    参数：bool collapsed, ImGuiCond cond = 0
+    说明：
+      collapsed：窗口是否折叠。
+      cond：条件，用于控制何时应用折叠状态。
+  ## void SetNextWindowFocus：设置下一个窗口为焦点窗口或置于最前。必须在 Begin() 之前调用
+  ## void SetNextWindowBgAlpha：设置下一个窗口背景色的透明度。帮助轻松覆盖 ImGuiCol_WindowBg/ChildBg/PopupBg 的 Alpha 组件。也可以使用 ImGuiWindowFlags_NoBackground
+    参数：float alpha
+    说明：alpha：背景颜色的透明度
+  ## void SetWindowPos：设置当前窗口的位置。在 Begin()/End() 之间调用
+    参数：const ImVec2& pos, ImGuiCond cond = 0
+    说明：
+      pos：窗口的目标位置。
+      cond：条件，用于控制何时应用位置设置。
+  ## void SetWindowSize：设置当前窗口的大小。在 Begin()/End() 之间调用。设置为 ImVec2(0, 0) 以强制自动适应内容
+    参数：const ImVec2& size, ImGuiCond cond = 0
+    说明：
+      size：窗口的目标大小。
+      cond：条件，用于控制何时应用大小设置
+  ## void SetWindowCollapsed：设置当前窗口的折叠状态
+    参数：bool collapsed, ImGuiCond cond = 0
+    说明：
+      collapsed：窗口是否折叠。
+      cond：条件，用于控制何时应用折叠状态。
+  ## void SetWindowFocus：设置当前窗口为焦点窗口或置于最前
+  ## void SetWindowFontScale：设置窗口的字体缩放比例。[过时] 调整 IO.FontGlobalScale 如果你想缩放所有窗口。这是旧 API！为了正确缩放，更推荐重新加载字体、重建 ImFontAtlas 并调用 style.ScaleAllSizes()
+    参数：float scale
+    说明：scale：字体缩放比例
+  ## void SetWindowPos： 设置指定名称窗口的位置
+    参数：const char* name, const ImVec2& pos, ImGuiCond cond = 0
+    说明：
+      name：窗口名称。
+      pos：窗口的目标位置。
+      cond：条件，用于控制何时应用位置设置。
+  ## void SetWindowSize：设置指定名称窗口的大小。设置某个轴为 0.0f 以强制该轴自动适应内容
+    参数：const char* name, const ImVec2& size, ImGuiCond cond = 0
+    说明：
+      name：窗口名称。
+      size：窗口的目标大小。
+      cond：条件，用于控制何时应用大小设置。
+  ## void SetWindowCollapsed：设置指定名称窗口的折叠状态。
+    参数：const char* name, bool collapsed, ImGuiCond cond = 0
+    说明：
+      name：窗口名称。
+      collapsed：窗口是否折叠。
+      cond：条件，用于控制何时应用折叠状态。
+  ## void SetWindowFocus：  设置指定名称窗口为焦点窗口或置于最前 
+    参数：const char* name
+    说明：name：窗口名称
   ## void ImGui::Text：文本控件，显示字符
     参数：const char* fmt
     说明：需要显示的字符
-
   ## bool ImGui::Button：按钮控件
     参数：const char* label, const ImVec2& size = ImVec2(0, 0)
     返回值：如果按钮被按下，则返回 true。

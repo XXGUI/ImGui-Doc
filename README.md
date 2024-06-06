@@ -1,4 +1,4 @@
-# ImGui-参数、函数文档
+# ImGui-基础参数、函数文档
   ## bool ImGui::Begin：创建父窗口
     参数：const char* id, bool* p_open = NULL, ImGuiWindowFlags flags = 0
     返回值：如果窗口当前可见，则返回 true。

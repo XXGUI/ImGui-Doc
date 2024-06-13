@@ -70,6 +70,18 @@ public:
         Left,
         Right
     };
+    enum class AnimationType {
+        All,
+        FadeInOut,
+        FadeDown,
+        FadeUp,
+        FadeLeft,
+        FadeRight
+    };
+    struct ToggleButtonState {
+        float t = 0.0f;
+        std::string label;
+    };
     struct PopupInfo {
         std::string content;
         Position position;
@@ -88,6 +100,8 @@ public:
     };
     std::vector<GridState> gridStack;
     std::unordered_map<std::string, float> scrollOffsets;
+    // 使用一个全局 map 存储每个动画的 Fade 变量
+    std::map<std::string, float> fadeMap;
 
     std::vector<ImVec4> getDefaultColor() {
         std::vector<ImVec4> colorListDe = {
@@ -484,10 +498,6 @@ public:
     }
 
     //开关
-    struct ToggleButtonState {
-        float t = 0.0f;
-        std::string label;
-    };
     static std::vector<ToggleButtonState> toggleButtonStates;
     bool ToggleButton(const char* label, bool* pToggle, float width=90,const std::string& selectBgColor = "16b777",const std::string& unSelectBgColor = "eeeeee", bool showText=false, float borderThickness = 5.0f) {
         static std::map<std::string, ToggleButtonState> toggleButtonStates;
@@ -602,55 +612,108 @@ public:
         }
     }
 
+    // 清除指定类型的动画
+    void clearFadeMap(std::initializer_list<AnimationType> types = { AnimationType::All }) {
+        // 遍历 fadeMap，根据类型清除对应的键
+        auto it = fadeMap.begin();
+        while (it != fadeMap.end()) {
+            bool erase = false;
+            for (auto type : types) {
+                switch (type) {
+                    case AnimationType::All:
+                        erase = true;
+                        break;
+                    case AnimationType::FadeInOut:
+                        erase = (it->first.find("AnimationFadeInOut") != std::string::npos);
+                        break;
+                    case AnimationType::FadeDown:
+                        erase = (it->first.find("AnimationFadeDown") != std::string::npos);
+                        break;
+                    case AnimationType::FadeUp:
+                        erase = (it->first.find("AnimationFadeUp") != std::string::npos);
+                        break;
+                    case AnimationType::FadeLeft:
+                        erase = (it->first.find("AnimationFadeLeft") != std::string::npos);
+                        break;
+                    case AnimationType::FadeRight:
+                        erase = (it->first.find("AnimationFadeRight") != std::string::npos);
+                        break;
+                }
+                if (erase) {
+                    it = fadeMap.erase(it);
+                    break; // 跳出内部循环，继续外部循环
+                }
+            }
+            if (!erase) {
+                ++it;
+            }
+        }
+    }
+
     //淡入淡出 isChecked：true淡入，false淡出
     bool AnimationFadeInOut(std::function<void()> widgets, bool isChecked = true, float duration = 4.0f){
-        static float FadeAlpha;
-        FadeAlpha = ImLerp(FadeAlpha, isChecked ? 1.0f : 0.f, ImGui::GetIO().DeltaTime * duration);
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, FadeAlpha);
-            ImGui::BeginGroup();
-                widgets();
-            ImGui::EndGroup();
+        static float Fade;
+        Fade = ImLerp(Fade, isChecked ? 1.0f : 0.f, ImGui::GetIO().DeltaTime * duration);
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Fade);
+            widgets();
         ImGui::PopStyleVar();
-        return std::abs(FadeAlpha - 1.f) < 0.1f;
+        return std::abs(Fade - 1.f) < 0.1f;
     }
 
-    bool AnimationFadeDown(std::function<void()> widgets, float endY = 200, float duration = 4.0f){
-        static float Fade;
+    //向下移动
+    bool AnimationFadeDown(std::function<void()> widgets, float endY = 20, float duration = 4.0f) {
+        ImGuiID id = ImGui::GetID((void*)&widgets);
+        std::string key = std::to_string(id) + "AnimationFadeDown";
+        if (fadeMap.find(key) == fadeMap.end()) {
+            fadeMap[key] = 0.0f;
+        }
+        float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endY, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + Fade);
-        ImGui::BeginGroup();
-            widgets();
-        ImGui::EndGroup();
+        widgets();
+        // 返回动画是否完成
         return std::abs(Fade - endY) < 1.0f;
     }
 
-    bool AnimationFadeUp(std::function<void()> widgets, float endY = 10, float duration = 4.0f){
-        static float Fade;
+    //向上移动
+    bool AnimationFadeUp(std::function<void()> widgets, float endY = 20, float duration = 4.0f){
+        ImGuiID id = ImGui::GetID((void*)&widgets);
+        std::string key = std::to_string(id) + "AnimationFadeUp";
+        if (fadeMap.find(key) == fadeMap.end()) {
+            fadeMap[key] = 0.0f;
+        }
+        float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endY, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - Fade);
-        ImGui::BeginGroup();
             widgets();
-        ImGui::EndGroup();
         return std::abs(Fade - endY) < 1.0f;
     }
 
+    //向左移动
     bool AnimationFadeLeft(std::function<void()> widgets, float endX = 10, float duration = 4.0f){
-        static float Fade;
+        ImGuiID id = ImGui::GetID((void*)&widgets);
+        std::string key = std::to_string(id) + "AnimationFadeLeft";
+        if (fadeMap.find(key) == fadeMap.end()) {
+            fadeMap[key] = 0.0f;
+        }
+        float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endX, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() - Fade);
-        ImGui::BeginGroup();
             widgets();
-        ImGui::EndGroup();
         return std::abs(Fade - endX) < 1.0f;
     }
 
+    //向右移动
     bool AnimationFadeRight(std::function<void()> widgets, float endX = 10, float duration = 4.0f){
-        static float Fade;
+        ImGuiID id = ImGui::GetID((void*)&widgets);
+        std::string key = std::to_string(id) + "AnimationFadeRight";
+        if (fadeMap.find(key) == fadeMap.end()) {
+            fadeMap[key] = 0.0f;
+        }
+        float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endX, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + Fade);
-        ImGui::BeginGroup();
             widgets();
-        ImGui::EndGroup();
         return std::abs(Fade - endX) < 1.0f;
     }
 

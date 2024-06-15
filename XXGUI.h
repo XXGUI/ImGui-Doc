@@ -7,8 +7,8 @@
 #include <vector>
 #include <map>
 
-ImVec2 MenuSize(1100,600);
-ImVec2 BeginPos(0,600);
+ImVec2 MenuSize(1000,800);
+ImVec2 BeginPos(0,550);
 
 // 不换行并行显示带间距
 void SameLineWithSpacing(float spacing=0.0) {
@@ -17,13 +17,10 @@ void SameLineWithSpacing(float spacing=0.0) {
 
 // 换行显示
 void CustomNewLine(float lineHeight = -1.0f) {
-    if (lineHeight < 0.0f) {
-        // 使用默认的行高
-        ImGui::Dummy(ImVec2(5.0f, 5.0f));
-    } else {
-        // 设置自定义行高
-        ImGui::Dummy(ImVec2(0.0f, lineHeight));
-    }
+    ImVec2 cursorPos = ImGui::GetCursorPos();
+    float lastItemHeight = ImGui::GetItemRectSize().y;
+    float newY = cursorPos.y + lastItemHeight + (lineHeight <= 0.0f ? 0.0f : lineHeight);
+    ImGui::SetCursorPos(ImVec2(ImGui::GetStyle().WindowPadding.x, newY));
 }
 
 // 辅助函数：将十六进制字符串转换为 ImGui 使用的颜色
@@ -52,6 +49,7 @@ float ConvertToFloat(const std::string& str, float parentSize) {
 
 class XXGUI {
 public:
+    bool setBeginPos = true;
     enum class Position {
         TopLeft,
         TopRight,
@@ -102,6 +100,8 @@ public:
     std::unordered_map<std::string, float> scrollOffsets;
     // 使用一个全局 map 存储每个动画的 Fade 变量
     std::map<std::string, float> fadeMap;
+    // Div标识累计
+    int divCounter = 0;
 
     std::vector<ImVec4> getDefaultColor() {
         std::vector<ImVec4> colorListDe = {
@@ -151,7 +151,8 @@ public:
     }
 
     // 自定义 Div 函数
-    void Div(const char* id, int gridWidth = 12, const std::string& height = "", const std::string& bgColor = "", float padding = 10.0f,int borderRadius = 10, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
+    void Div(int gridWidth = 12, const std::string& height = "", const std::string& bgColor = "", float padding = 10.0f,int borderRadius = 10, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
+        const std::string id = "Div_" + std::to_string(divCounter++);
         gridWidth = gridWidth > 0 ? gridWidth : 12;
         padding = padding <=0 ? 10 : padding;
         // 获取父容器宽度
@@ -165,7 +166,7 @@ public:
         // 处理换行逻辑
         if (currentGrid.currentColSum + gridWidth > 12) {
             currentGrid.currentColSum = 0;
-            CustomNewLine();
+            //CustomNewLine();
         }
         // 计算宽度
         float width = currentGrid.parentWidth * (gridWidth / 12.0f);
@@ -183,7 +184,7 @@ public:
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, borderRadius);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
         // 创建带滚动条的子窗口，默认不显示边框
-        ImGui::BeginChild(id, ImVec2(width, heightVal), true, flags);
+        ImGui::BeginChild(id.c_str(), ImVec2(width, heightVal), true, flags);
         // 获取当前滚动偏移量
         float& scrollOffset = scrollOffsets[id];
         // 检测内容高度是否超过窗口高度
@@ -194,7 +195,7 @@ public:
             scrollOffset -= ImGui::GetIO().MouseDelta.y;
             scrollOffset = std::max(0.0f, std::min(scrollOffset, ImGui::GetScrollMaxY()));
             ImGui::SetScrollY(scrollOffset);
-        }else if(contentHeight < windowHeight && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
+        }else if(setBeginPos & contentHeight < windowHeight && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
             ImVec2 delta = ImGui::GetMouseDragDelta(0, 0.0f);
             BeginPos.x += delta.x;
             BeginPos.y += delta.y;
@@ -223,6 +224,7 @@ public:
 
     // 重置栅格系统
     void ResetGrid() {
+        divCounter = 0;
         gridStack.clear();
         gridStack.push_back({0, 0});
     }
@@ -372,24 +374,40 @@ public:
         return active;
     }
 
-    bool Tabs(const std::vector<std::string>& tabs, int* currentIndex, float height = 0.0f, float width = 0.0f,
+    bool Tabs(const std::vector<std::string>& tabs, int* currentIndex, const std::string& height = "", const std::string& width = "",
                 const std::string& bgColor = "FFFFFF", const std::string& textColor = "000000", const std::string& activeColor = "16b777",
-                float padding = 10.0f,float textSize = 30.0f) {
+                float padding = 10.0f,bool selectShowTop = false,float textSize = 30.0f) {
         bool valueChanged = false;
         float radius = 5;
+        // 计算高度
+        float heightVal = 0;
+        if (!height.empty()) {
+            float parentHeight = ImGui::GetContentRegionAvail().y;
+            heightVal = ConvertToFloat(height, parentHeight);
+        } else {
+            heightVal = ImGui::GetContentRegionAvail().y;
+        }
+        // 计算宽度度
+        float widthVal = 0;
+        if (!width.empty()) {
+            float parentWidth = ImGui::GetContentRegionAvail().x;
+            widthVal = ConvertToFloat(width, parentWidth);
+        } else {
+            widthVal = ImGui::GetContentRegionAvail().x;
+        }
         ImVec2 itemSpacing = ImGui::GetStyle().ItemSpacing;
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, itemSpacing.y));
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
         ImVec2 canvas_size = ImGui::GetContentRegionAvail();
-        float tabWidth = (width == 0.0f) ? (canvas_size.x - padding * 2) / tabs.size(): width / tabs.size();
-        float tabHeight = (height == 0.0f) ? 0.0f : height;
+        float tabWidth = (widthVal == 0.0f) ? (canvas_size.x - padding * 2) / tabs.size(): widthVal / tabs.size();
+        float tabHeight = (heightVal == 0.0f) ? 0.0f : heightVal;
         canvas_pos=ImVec2(canvas_pos.x,canvas_pos.y);
         for (int i = 0; i < tabs.size(); ++i) {
             ImVec2 tab_pos = ImVec2(canvas_pos.x + i * tabWidth, canvas_pos.y );
             ImVec2 tab_size = ImVec2(tabWidth, tabHeight);
             // 计算自适应高度
-            if (height == 0.0f) {
+            if (heightVal == 0.0f) {
                 ImVec2 textSize = ImGui::CalcTextSize(tabs[i].c_str());
                 tabHeight = textSize.y + padding * 2;
                 tab_size.y = tabHeight;
@@ -406,9 +424,13 @@ public:
             ImVec2 textSizeVec = ImGui::CalcTextSize2(tabs[i].c_str(), 0, textSize);
             ImVec2 textPos = ImVec2(tab_pos.x + (tabWidth - textSizeVec.x) * 0.5f, tab_pos.y + (tabHeight - textSizeVec.y) * 0.5f);
             draw_list->AddText(NULL, textSize, textPos, HexToColor(textColor), tabs[i].c_str());
-            // 底部颜色
+            // 选中标记颜色
             if (i == *currentIndex) {
-                draw_list->AddLine(ImVec2(tab_pos.x, tab_pos.y + tabHeight), ImVec2(tab_pos.x + tabWidth, tab_pos.y + tabHeight), HexToColor(activeColor), 7.0f);
+                if(selectShowTop){
+                    draw_list->AddLine(ImVec2(tab_pos.x, tab_pos.y), ImVec2(tab_pos.x + tabWidth, tab_pos.y), HexToColor(activeColor), 7.0f);
+                }else{
+                    draw_list->AddLine(ImVec2(tab_pos.x, tab_pos.y + tabHeight), ImVec2(tab_pos.x + tabWidth, tab_pos.y + tabHeight), HexToColor(activeColor), 7.0f);
+                }
             }
             // 处理点击事件
             ImGui::SetCursorScreenPos(tab_pos);
@@ -422,20 +444,36 @@ public:
         return valueChanged;
     }
 
-    bool VerticalTabs(const std::vector<std::string>& tabs, int* currentIndex, float height = 0.0f, float width = 0.0f,
+    bool VerticalTabs(const std::vector<std::string>& tabs, int* currentIndex, const std::string& height = "", const std::string& width = "",
                     const std::string& bgColor = "FFFFFF", const std::string& textColor = "000000", const std::string& activeColor = "16b777",
                     float padding = 10.0f, bool centerVertically = false, float textSize = 30.0f,
                     TextAlign textAlign = TextAlign::Center) {
         bool valueChanged = false;
         float radius = 5;
+        // 计算高度
+        float heightVal = 0;
+        if (!height.empty()) {
+            float parentHeight = ImGui::GetContentRegionAvail().y;
+            heightVal = ConvertToFloat(height, parentHeight);
+        } else {
+            heightVal = ImGui::GetContentRegionAvail().y;
+        }
+        // 计算宽度度
+        float widthVal = 0;
+        if (!width.empty()) {
+            float parentWidth = ImGui::GetContentRegionAvail().x;
+            widthVal = ConvertToFloat(width, parentWidth);
+        } else {
+            widthVal = ImGui::GetContentRegionAvail().x;
+        }
         ImVec2 itemSpacing = ImGui::GetStyle().ItemSpacing;
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, itemSpacing.y));
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
         ImVec2 canvas_size = ImGui::GetContentRegionAvail();
         // 获取控件宽度和高度
-        float tabWidth = (width == 0.0f) ? canvas_size.x - padding * 2 : width;
-        float tabHeight = (height == 0.0f) ? 0.0f : height;
+        float tabWidth = (widthVal == 0.0f) ? canvas_size.x - padding * 2 : widthVal;
+        float tabHeight = (widthVal == 0.0f) ? 0.0f : widthVal;
         // 计算所有选项卡的总高度
         float totalHeight = 0.0f;
         for (int i = 0; i < tabs.size(); ++i) {
@@ -655,65 +693,95 @@ public:
         static float Fade;
         Fade = ImLerp(Fade, isChecked ? 1.0f : 0.f, ImGui::GetIO().DeltaTime * duration);
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Fade);
-            widgets();
+        widgets();
         ImGui::PopStyleVar();
         return std::abs(Fade - 1.f) < 0.1f;
     }
 
+    //循环淡入淡出
+     bool AnimationFadeInOutLoop(std::function<void()> widgets, float duration = 4.0f) {
+        static float Fade = 0.0f;
+        static bool isFadingIn = true;
+        static float timeElapsed = 0.0f;
+        timeElapsed += ImGui::GetIO().DeltaTime;
+        if (isFadingIn) {
+            Fade = ImLerp(Fade, 1.0f, timeElapsed / duration);
+            if (Fade >= 0.99f) {
+                isFadingIn = false;
+                timeElapsed = 0.0f;
+            }
+        } else {
+            Fade = ImLerp(Fade, 0.0f, timeElapsed / duration);
+            if (Fade <= 0.01f) {
+                isFadingIn = true;
+                timeElapsed = 0.0f;
+            }
+        }
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Fade);
+        widgets();
+        ImGui::PopStyleVar();
+        return std::abs(Fade - 1.f) < 0.1f;
+    }
+
+
+
     //向下移动
-    bool AnimationFadeDown(std::function<void()> widgets, float endY = 20, float duration = 4.0f) {
+    bool AnimationFadeDown(std::function<void()> widgets, float initEndY = 50, float endY = 0, float duration = 4.0f) {
         ImGuiID id = ImGui::GetID((void*)&widgets);
         std::string key = std::to_string(id) + "AnimationFadeDown";
         if (fadeMap.find(key) == fadeMap.end()) {
-            fadeMap[key] = 0.0f;
+            fadeMap[key] = initEndY;
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() - initEndY);
         }
         float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endY, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + Fade);
         widgets();
-        // 返回动画是否完成
         return std::abs(Fade - endY) < 1.0f;
     }
 
     //向上移动
-    bool AnimationFadeUp(std::function<void()> widgets, float endY = 20, float duration = 4.0f){
+    bool AnimationFadeUp(std::function<void()> widgets, float initEndY = 50, float endY = 0, float duration = 4.0f){
         ImGuiID id = ImGui::GetID((void*)&widgets);
         std::string key = std::to_string(id) + "AnimationFadeUp";
         if (fadeMap.find(key) == fadeMap.end()) {
-            fadeMap[key] = 0.0f;
+            fadeMap[key] = (-initEndY);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (-initEndY));
         }
         float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endY, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - Fade);
-            widgets();
+        widgets();
         return std::abs(Fade - endY) < 1.0f;
     }
 
     //向左移动
-    bool AnimationFadeLeft(std::function<void()> widgets, float endX = 10, float duration = 4.0f){
+    bool AnimationFadeLeft(std::function<void()> widgets, float initEndX = 300, float endX = 0, float duration = 4.0f){
         ImGuiID id = ImGui::GetID((void*)&widgets);
         std::string key = std::to_string(id) + "AnimationFadeLeft";
         if (fadeMap.find(key) == fadeMap.end()) {
-            fadeMap[key] = 0.0f;
+            fadeMap[key] = (-initEndX);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (-initEndX));
         }
         float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endX, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() - Fade);
-            widgets();
+        widgets();
         return std::abs(Fade - endX) < 1.0f;
     }
 
     //向右移动
-    bool AnimationFadeRight(std::function<void()> widgets, float endX = 10, float duration = 4.0f){
+    bool AnimationFadeRight(std::function<void()> widgets, float initEndX = 300, float endX = 0,float duration = 4.0f){
         ImGuiID id = ImGui::GetID((void*)&widgets);
         std::string key = std::to_string(id) + "AnimationFadeRight";
         if (fadeMap.find(key) == fadeMap.end()) {
-            fadeMap[key] = 0.0f;
+            fadeMap[key] = -initEndX;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() - initEndX);
         }
         float& Fade = fadeMap[key];
         Fade = ImLerp(Fade, endX, ImGui::GetIO().DeltaTime * duration);
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + Fade);
-            widgets();
+        widgets();
         return std::abs(Fade - endX) < 1.0f;
     }
 

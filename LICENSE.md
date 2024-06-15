@@ -211,3 +211,170 @@
           ImGui::End();
           ImGui::PopStyleVar();
       }
+## 调用示例2
+    XXGUI xxg;
+    static bool checkboxValue1 = true;
+    static bool checkboxValue2 = true;
+    static bool checkboxValue3 = true;
+    static bool checkboxValue4 = true;
+    static bool checkboxValue5 = true;
+    static bool checkboxValue6 = true;
+    static bool checkboxValue11 = false;
+    static bool checkboxValue22 = false;
+    static bool checkboxValue33 = false;
+    static bool checkboxValue44 = false;
+    static bool checkboxValue55 = false;
+    static bool checkboxValue66 = false;
+    static int RadioButton1 = 0;
+    static int RadioButton2 = 0;
+    static float sliderValue1 = 5;
+    static float sliderValue2 = 10;
+    static float sliderValue3 = 15;
+    static float sliderValue4 = 25;
+    static float sliderValue5 = 25;
+    static float sliderValue6 = 25;
+    static bool ToggleButton1 = true;
+    static bool ToggleButton2 = true;
+    static bool ToggleButton3 = true;
+    static bool ToggleButton4 = true;
+    static bool ToggleButton5 = true;
+    static bool ToggleButton6 = true;
+    static bool ToggleButton7 = false;
+    static int tabIndex = 1;
+    static int verticalTabsIndex = 0;
+    std::vector<std::string> verticalTabs = {"选项5", "选项2", "选项3","选项4"};
+    std::vector<std::string> tabs = {"单/复选框", "滑块&颜色", "按钮&开关","内容滑动","动画效果"};
+    static ImVec4* selectedColor;
+    static int colorIndex=0;
+    void ShowMyGUI() {
+        xxg.ResetGrid();
+        xxg.AnimationFadeInOut([]() {
+            xxg.Div("div0");
+                xxg.Div("div1", 3, "", "2f363c",0);
+                    if(xxg.VerticalTabs(tabs, &tabIndex,80,0,"","FFFFFF", "16b777", 10.0f, true,50)){
+                        xxg.clearFadeMap({
+                            XXGUI::AnimationType::FadeInOut,
+                            XXGUI::AnimationType::FadeDown,
+                            XXGUI::AnimationType::FadeLeft,
+                            XXGUI::AnimationType::FadeRight
+                        });
+                    }
+                xxg.EndDiv();
+                SameLineWithSpacing(10);
+                xxg.Div("div2", 9, "", "2f363c",30);
+                    if(4!=tabIndex)
+                        xxg.AnimationFadeUp([]() {
+                            xxg.Tabs(verticalTabs, &verticalTabsIndex,70,0,"","FFFFFF");
+                        });
+                    if(0==tabIndex){
+                        xxg.Checkbox("复选框0", &checkboxValue1,"67C23A","","","F56C6C");
+                        xxg.Checkbox("复选框2", &checkboxValue2,"E6A23C","","","67C23A");
+                        xxg.Checkbox("复选框3", &checkboxValue3,"F56C6C","","","E6A23C");
+                        xxg.Checkbox("复选框4", &checkboxValue4,"ffb800","","","FFFFFF");
+                        CustomNewLine();
+                        xxg.Checkbox("复选框5", &checkboxValue11,"67C23A","","","F56C6C");
+                        xxg.Checkbox("复选框6", &checkboxValue22,"E6A23C","","","67C23A");
+                        xxg.Checkbox("复选框7", &checkboxValue33,"F56C6C","","","E6A23C");
+                        xxg.Checkbox("复选框8", &checkboxValue44,"ffb800","","","FFFFFF");
+                        CustomNewLine();
+                        xxg.RadioButton("单选框9", 0, &RadioButton1,0,"","","FFFFFF");
+                        xxg.RadioButton("单选框10", 1, &RadioButton1,0,"","","F56C6C");
+                        xxg.RadioButton("单选框11", 2, &RadioButton1,0,"","","67C23A");
+                        xxg.RadioButton("单选框12", 3, &RadioButton1,0,"","","ffb800");
+                        CustomNewLine();
+                        xxg.RadioButton("单选框13", 0, &RadioButton2,0,"67C23A","","FFFFFF");
+                        xxg.RadioButton("单选框14", 1, &RadioButton2,0,"FFFFFF","","F56C6C");
+                        xxg.RadioButton("单选框15", 2, &RadioButton2,0,"F56C6C","","67C23A");
+                        xxg.RadioButton("单选框16", 3, &RadioButton2,0,"a233c6","","ffb800");
+                    }else if(1==tabIndex){
+                        CustomNewLine();
+                        xxg.Slider("滑块名称1", &sliderValue1);
+                        xxg.Slider("滑块名称2", &sliderValue2,0,20,"1e9fff","eeeeee",0,true);
+                        xxg.Slider("滑块名称3", &sliderValue3,0,20,"67C23A","eeeeee",0);
+                        xxg.Slider("滑块名称4", &sliderValue4,0,100,"ff5722","eeeeee",0,true);
+                        xxg.Slider("滑块名称5", &sliderValue5,0,50,"F56C6C","a233c6",0);
+                        xxg.Slider("滑块名称6", &sliderValue6,0,100,"a233c6","ff5722",0,true);
+                        CustomNewLine();
+                        //xxg.ColorPicker("颜色",ImVec2(0,0),selectedColor,colorIndex);
+                    }else if(2==tabIndex){
+                        CustomNewLine();
+                        xxg.ToggleButton("开关1", &ToggleButton1);
+                        SameLineWithSpacing(30);
+                        xxg.ToggleButton("开关2", &ToggleButton2,90,"1e9fff");
+                        SameLineWithSpacing(30);
+                        xxg.ToggleButton("开关3", &ToggleButton3,90,"67C23A");
+                        SameLineWithSpacing(30);
+                        xxg.ToggleButton("开关4", &ToggleButton4,90,"ff5722");
+                        SameLineWithSpacing(30);
+                        xxg.ToggleButton("开关5", &ToggleButton5,90,"F56C6C");
+                        SameLineWithSpacing(30);
+                        xxg.ToggleButton("开关6", &ToggleButton6,90,"a233c6");
+                        CustomNewLine(70);
+                        if (xxg.Button("左上弹窗", ImVec2(170, 80),"16baaa","FFFFFF")) {
+                            xxg.Show("左上弹窗",XXGUI::Position::TopLeft);
+                        }
+                        if (xxg.Button("顶部弹窗", ImVec2(170, 80),"16b777","FFFFFF")) {
+                            xxg.Show("顶部弹窗",XXGUI::Position::Top);
+                        }
+                        if (xxg.Button("右上弹窗", ImVec2(170, 80),"1e9fff","FFFFFF")) {
+                            xxg.Show("右上弹窗",XXGUI::Position::TopRight);
+                        }
+                        if (xxg.Button("左下弹窗", ImVec2(170, 80),"ff5722","FFFFFF")) {
+                            xxg.Show("左下弹窗",XXGUI::Position::BottomLeft);
+                        }
+                        CustomNewLine(70);
+                        if (xxg.Button("底部弹窗", ImVec2(170, 80),"ffb800","FFFFFF")) {
+                        xxg.Show("底部弹窗",XXGUI::Position::Bottom);
+                        }
+                        if (xxg.Button("右下弹窗", ImVec2(170, 80),"67C23A","FFFFFF",50)) {
+                            xxg.Show("右下弹窗",XXGUI::Position::BottomRight);
+                        }
+                        if (xxg.Button("居中弹窗", ImVec2(170, 80),"FFFFFF","67C23A",50)) {
+                            xxg.Show("居中弹窗",XXGUI::Position::Center);
+                        }
+                        if (xxg.Button("退出程序", ImVec2(170, 80),"ff5722","FFFFFF",50)) {
+                            exit(0);
+                        }
+                    }else if(3==tabIndex){
+                        for (int i = 0; i < 50; ++i) {
+                            ImGui::Text(("可以按住内容上下滑动" + std::to_string(i)).c_str());
+                        }
+                    }else if(4==tabIndex){
+                        xxg.AnimationFadeInOut([]() {
+                            xxg.AnimationFadeDown([]() {
+                                xxg.Button("淡入", ImVec2(170, 80),"16baaa","FFFFFF");
+                            },30);
+                        });
+                        xxg.AnimationFadeInOut([]() {
+                            xxg.ToggleButton("开关71", &ToggleButton1);
+                        },30);
+                        xxg.AnimationFadeRight([]() {
+                            xxg.RadioButton("单选框13动画", 0, &RadioButton2,0,"67C23A","","FFFFFF");
+                        },50);
+                        CustomNewLine();
+                        xxg.AnimationFadeInOut([]() {
+                            xxg.Checkbox("复选框1111", &checkboxValue1,"67C23A","","","F56C6C");
+                        },50);
+                        xxg.AnimationFadeLeft([]() {
+                            xxg.Checkbox("复选框1d111222", &checkboxValue2,"E6A23C","","","67C23A");
+                        },50);
+                        CustomNewLine();
+                        xxg.AnimationFadeDown([]() {
+                            xxg.Slider("滑块名称1333", &sliderValue1);
+                        },50);
+                    }
+                xxg.EndDiv();
+            xxg.EndDiv();
+        });
+        xxg.Render();
+    }
+    
+    void menu(){
+        ImGui::SetNextWindowPos(BeginPos);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::SetNextWindowSize(MenuSize);
+        ImGui::Begin("窗口", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
+           ShowMyGUI();
+        ImGui::End();
+        ImGui::PopStyleVar();
+    }

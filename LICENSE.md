@@ -93,7 +93,7 @@
       Top：顶部
       Bottom：底部
   
-  ## 调用示例：
+  ## 调用示例1：
       #include "XXGUI.h"
       XXGUI xxg;
       static bool checkboxValue1 = false;
@@ -378,3 +378,150 @@
         ImGui::End();
         ImGui::PopStyleVar();
     }
+
+## 调用示例3：
+    XXGUI xxg;
+    static bool checkboxValue1 = true;
+    static bool checkboxValue2 = true;
+    static bool checkboxValue3 = true;
+    static bool checkboxValue4 = true;
+    static bool checkboxValue5 = true;
+    static bool checkboxValue6 = true;
+    static bool checkboxValue7 = false;
+    static bool checkboxValue8 = false;
+    static bool checkboxValue9 = false;
+    static bool checkboxValue10 = false;
+    static bool checkboxValue11 = false;
+    static bool checkboxValue12 = false;
+    static int RadioButton1 = 0;
+    static int RadioButton2 = 0;
+    static float sliderValue1 = 100;
+    static float sliderValue2 = 10;
+    static float sliderValue3 = 15;
+    static float sliderValue4 = 25;
+    static float sliderValue5 = 25;
+    static float sliderValue6 = 25;
+    static bool ToggleButton1 = true;
+    static bool ToggleButton2 = true;
+    static bool ToggleButton3 = false;
+    static bool ToggleButton4 = false;
+    static bool ToggleButton5 = true;
+    static bool ToggleButton6 = true;
+    static bool ToggleButton7 = false;
+    static int tabIndex = 1;
+    static int verticalTabsIndex = 0;
+    std::vector<std::string> verticalTabs = {"选项5", "选项2", "选项3","选项4"};
+    std::vector<std::string> tabs = {"吴迪绘制", "吴迪自瞄"};
+    static ImVec4* selectedColor;
+    static int colorIndex=0;
+    void ShowMyGUI() {
+        xxg.ResetGrid();
+        xxg.AnimationFadeInOut([]() {
+            xxg.AnimationFadeDown([]() {
+                xxg.Div(12,"100px","2f363c");
+                    if(xxg.Tabs(tabs, &tabIndex,"","","2f363c","FFFFFF", "16b777", 20.0f)){
+                        xxg.clearFadeMap({
+                            XXGUI::AnimationType::FadeUp,
+                            XXGUI::AnimationType::FadeLeft,
+                            XXGUI::AnimationType::FadeRight
+                        });
+                    }
+                xxg.EndDiv();
+            });
+            xxg.Div(12,"","2f363c",10);
+                if(0==tabIndex){
+                    xxg.Div(12,"","",0);
+                        xxg.AnimationFadeRight([]() {
+                            xxg.Checkbox("张豪", &checkboxValue1);
+                            xxg.Checkbox("刘小涛", &checkboxValue2);
+                            xxg.Checkbox("碗白", &checkboxValue3);
+                            xxg.Checkbox("张小豪", &checkboxValue4);
+                            xxg.Checkbox("嗯嗯", &checkboxValue5);
+                            xxg.Checkbox("雪花", &checkboxValue6);
+                        });
+                        CustomNewLine(20);
+                        xxg.AnimationFadeLeft([]() {
+                            xxg.Checkbox("马化腾", &checkboxValue7);
+                            xxg.Checkbox("丁磊", &checkboxValue8);
+                            xxg.Checkbox("史玉柱", &checkboxValue9);
+                            xxg.Checkbox("马云", &checkboxValue10);
+                            xxg.Checkbox("刘强东", &checkboxValue11);
+                            xxg.Checkbox("王健林", &checkboxValue12);
+                        });
+                        CustomNewLine(20);
+                        if (xxg.Button("退出程序", ImVec2(170, 80),"ff5722","FFFFFF",50)) {
+                            exit(0);
+                        }
+                        CustomNewLine(20);
+                        xxg.CustomText("其他更多内容自己添加", ImVec2(200, 50),10,0,1.5f,false);
+                    xxg.EndDiv();
+                }else if(1==tabIndex){
+                    xxg.AnimationFadeUp([]() {
+                        xxg.Div(12,"70px","FFFFFF1f");
+                            xxg.CustomText("自瞄", ImVec2(80, 50));
+                            SameLineWithSpacing(10);
+                            xxg.ToggleButton("开关1", &ToggleButton1);
+                            SameLineWithSpacing(30);
+                            xxg.CustomText("倒地不瞄", ImVec2(150, 50));
+                            SameLineWithSpacing(10);
+                            xxg.ToggleButton("开关2", &ToggleButton2,90,"1e9fff");
+                            SameLineWithSpacing(30);
+                            xxg.CustomText("人机不瞄", ImVec2(150, 50));
+                            SameLineWithSpacing(10);
+                            xxg.ToggleButton("开关3", &ToggleButton3,90,"67C23A");
+                        xxg.EndDiv();
+                    });
+                    xxg.Div(5);
+                        xxg.AnimationFadeRight([]() {
+                            xxg.Div(12,"","FFFFFF1f",0);
+                                xxg.DivTitle("瞄准模式",6);
+                                    xxg.RadioButton("开镜", 0, &RadioButton1);
+                                    CustomNewLine();
+                                    xxg.RadioButton("开火", 1, &RadioButton1);
+                                    CustomNewLine();
+                                    xxg.RadioButton("开镜|开火", 2, &RadioButton1);
+                                    CustomNewLine();
+                                    xxg.RadioButton("锁死", 3, &RadioButton1);
+                                xxg.EndDiv();
+                                xxg.DivTitle("瞄准位置",6);
+                                    xxg.RadioButton("头部", 0, &RadioButton2);
+                                    CustomNewLine();
+                                    xxg.RadioButton("胸部", 1, &RadioButton2);
+                                    CustomNewLine();
+                                    xxg.RadioButton("腿部", 2, &RadioButton2);
+                                xxg.EndDiv();
+                            xxg.EndDiv();
+                        });
+                    xxg.EndDiv();
+                    xxg.Div(7);
+                        xxg.AnimationFadeLeft([]() {
+                            xxg.Div(12,"","FFFFFF1f",0);
+                                xxg.DivTitle("瞄准范围",12,"90px");
+                                    xxg.Slider("瞄准范围", &sliderValue1,10,200,"16b777","eeeeee",0,true);
+                                xxg.EndDiv();
+                                xxg.DivTitle("瞄准速度",12,"90px");
+                                    xxg.Slider("瞄准速度", &sliderValue2,1,20,"16b777","eeeeee",0,true);
+                                xxg.EndDiv();
+                                xxg.DivTitle("平滑力度",12,"90px");
+                                    xxg.Slider("平滑力度", &sliderValue3,1,20,"16b777","eeeeee",0,true);
+                                xxg.EndDiv();
+                            xxg.EndDiv();
+                        });
+                    xxg.EndDiv();
+                }
+            xxg.EndDiv();
+        });
+        xxg.Render();
+    }
+    
+    void menu(){
+        setWinSize(BeginPos.x+MenuSize.x,BeginPos.y+MenuSize.y);
+        ImGui::SetNextWindowPos(BeginPos);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::SetNextWindowSize(MenuSize);
+        ImGui::Begin("窗口", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
+           ShowMyGUI();
+        ImGui::End();
+        ImGui::PopStyleVar();
+    }
+

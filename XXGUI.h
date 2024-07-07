@@ -191,7 +191,8 @@ public:
     }
 
     // 自定义 Div 函数
-    void Div(int gridWidth = 12, const std::string& height = "", const std::string& bgColor = "", float padding = 10.0f,int borderRadius = 10, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
+    void Div(int gridWidth = 12, const std::string& height = "", const std::string& bgColor = "", float padding = 10.0f,
+             int borderRadius = 10, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
         const std::string id = "Div_" + std::to_string(divCounter++);
         gridWidth = gridWidth > 0 ? gridWidth : 12;
         // 获取父容器宽度
@@ -207,7 +208,7 @@ public:
             currentGrid.currentColSum = 0;
         }
         // 计算宽度
-        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - padding ;
+        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - padding * 2;
         // 计算高度
         float heightVal = 0;
         if (!height.empty()) {
@@ -260,7 +261,7 @@ public:
             currentGrid.currentColSum = 0;
         }
         // 计算宽度
-        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - padding;
+        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - padding * 2;
         // 计算高度
         float heightVal = 0;
         if (!height.empty()) {
@@ -471,7 +472,7 @@ public:
     //单选按钮组
     void RadioGroup(const char* label, int* selectedIndex,std::vector<std::string> options,
                     const std::string& width = "",const std::string& 背景颜色 = "",const std::string& 文本颜色 = "FFFFFF",
-                    const std::string& 选中颜色 = "16b777",float padding=10.0f,float fontSize=1.0f, float borderRadius = 10.0f) {
+                    const std::string& 选中颜色 = "16b777",float padding=5.0f,float fontSize=1.0f, float borderRadius = 10.0f) {
         ImGui::SetWindowFontScale(fontSize);
         ImGui::PushID(label);
         const ImGuiStyle& style = ImGui::GetStyle();
@@ -482,13 +483,13 @@ public:
         const ImU32 unselectedTextColor = HexToColor(文本颜色.empty()?"FFFFFF":文本颜色);
         const ImU32 selectedTextColor = HexToColor(文本颜色.empty()?"FFFFFF":文本颜色);
         float widthVal = 0;
+        size_t numOptions = options.size();
         if (!width.empty()) {
             float parentWidth = ImGui::GetContentRegionAvail().x;
-            widthVal = ConvertToFloat(width, parentWidth);
+            widthVal = ConvertToFloat(width, parentWidth) - padding * 2;
         } else {
-            widthVal = ImGui::GetContentRegionAvail().x;
+            widthVal = ImGui::GetContentRegionAvail().x - padding * 2;
         }
-        size_t numOptions = options.size();
         const float buttonWidth = widthVal / numOptions;
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, borderRadius);

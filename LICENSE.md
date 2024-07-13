@@ -8,7 +8,7 @@
     参数：hexColor 十六进制颜色字符串
   # ConvertToFloat：将百分比字符串转换为浮点数值
     参数：str 百分比，parentSize 具体像素
-  # Div：布局头（目前内容超出高度可滑动功能仅支持ImGui原生控件）
+  # Div：布局头（目前Div嵌套无法触发上下滑动）
     参数：
       id：标识
       gridWidth：占格数，最大12，参考bs的栅格

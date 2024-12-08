@@ -1,4 +1,5 @@
-#include "imgui.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -6,9 +7,13 @@
 #include <chrono>
 #include <vector>
 #include <map>
+#include <functional>
 
+float screen_x = 1000;
+float screen_y = 400;
 ImVec2 MenuSize(1100, 600);
 ImVec2 BeginPos(0, 0);
+
 
 // 不换行并行显示带间距
 void SameLineWithSpacing(float spacing = 0.0) {
@@ -138,15 +143,16 @@ public:
     struct GridState {
         int currentColSum;
         float parentWidth;
+        float parentHeight;
     };
-    std::vector <GridState> gridStack;
+    std::vector<GridState> gridStack;
     std::unordered_map<std::string, float> scrollOffsets;
     // 使用一个全局 map 存储每个动画的 Fade 变量
     std::map<std::string, float> fadeMap;
     // Div标识累计
     int divCounter = 0;
 
-    std::vector <ImVec4> colorList = {
+    std::vector<ImVec4> colorList = {
             ImVec4(1.0f, 1.0f, 1.0f, 1.0f),
             ImVec4(1.0f, 0.341f, 0.133f, 1.0f),  // #ff5722
             ImVec4(1.0f, 0.722f, 0.0f, 1.0f),    // #ffb800
@@ -180,8 +186,8 @@ public:
     void Render() {
         auto currentTime = std::chrono::steady_clock::now();
         for (auto &popup: popups) {
-            if (std::chrono::duration_cast < std::chrono::duration <
-                float >> (currentTime - popup.showTime).count() >= popup.duration) {
+            if (std::chrono::duration_cast<std::chrono::duration<
+                    float >>(currentTime - popup.showTime).count() >= popup.duration) {
                 popup.showTime = std::chrono::steady_clock::time_point::min(); // 标记为过期
             } else {
                 RenderPopup(popup);
@@ -192,17 +198,10 @@ public:
         }), popups.end());
     }
 
-    // 设置光标以自适应布局
-    void setItem(ImVec2 pos, ImVec2 size) {
-        ImGui::ItemSize(size, 0);
-        ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
-        ImGui::ItemAdd(bb, 0);
-    }
-
     // 自定义 Div 函数
     void Div(int gridWidth = 12, const std::string &height = "", const std::string &bgColor = "",
              float padding = 10.0f,
-             int borderRadius = 10, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
+             int borderRadius = 0, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
         const std::string id = "Div_" + std::to_string(divCounter++);
         gridWidth = gridWidth > 0 ? gridWidth : 12;
         // 获取父容器宽度
@@ -210,6 +209,7 @@ public:
             gridStack.push_back({0, 0});
         }
         GridState &currentGrid = gridStack.back();
+        currentGrid.parentHeight = ImGui::GetContentRegionAvail().y;
         if (currentGrid.parentWidth == 0) {
             currentGrid.parentWidth = ImGui::GetContentRegionAvail().x;
         }
@@ -218,7 +218,7 @@ public:
             currentGrid.currentColSum = 0;
         }
         // 计算宽度
-        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - padding * 2;
+        float width = currentGrid.parentWidth * (gridWidth / 12.0f);
         // 计算高度
         float heightVal = 0;
         if (!height.empty()) {
@@ -234,6 +234,11 @@ public:
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
         // 创建带滚动条的子窗口，默认不显示边框
         ImGui::BeginChild(id.c_str(), ImVec2(width, heightVal), true, flags);
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+        //顶部内阴影
+        draw_list->AddLine(ImVec2(currentGrid.parentWidth, currentGrid.parentHeight),
+                           ImVec2( width,currentGrid.parentHeight+15),
+                           HexToColor("f2f2f2"), 7.0f);
         // 获取当前滚动偏移量
         float &scrollOffset = scrollOffsets[id];
         // 检测内容高度是否超过窗口高度
@@ -324,7 +329,7 @@ public:
 
     void EndDiv() {
         ImGui::EndChild();
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor(2);
         ImGui::PopStyleVar(2);
         // 从栅格状态栈中移除当前状态
         gridStack.pop_back();
@@ -345,8 +350,7 @@ public:
     }
 
     // 文本
-    void
-    CustomText(const char *text, ImVec2 size = ImVec2(0, 0), int padding = 5, int alignment = 0,
+    void CustomText(const char *text, ImVec2 size = ImVec2(0, 0), int padding = 5, int alignment = 0,
                float fontSize = 1.5f, bool showShadow = false,
                const std::string &bgColor = "", const std::string &textColor = "FFFFFF") {
         ImGui::SetWindowFontScale(fontSize);
@@ -403,8 +407,8 @@ public:
     }
 
     // 按钮
-    bool Button(const char* label = "按钮", ImVec2 size = ImVec2(0, 0),
-                const std::string& buttonColorHex = "FFFFFF", const std::string& textColorHex = "000000",
+    bool Button(const char *label = "按钮", ImVec2 size = ImVec2(0, 0),
+                const std::string &buttonColorHex = "FFFFFF", const std::string &textColorHex = "000000",
                 int borderRadius = 10, bool sameLine = true) {
         // 设置按钮样式
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, borderRadius);
@@ -423,13 +427,13 @@ public:
         }
         return clicked;
     }
-    
+
     // 带函数按钮
     bool ButtonCallBack(const char *label = "按钮", ImVec2 size = ImVec2(0, 0),
-                std::function<void()> widgets = []() {},
-                const std::string &buttonColorHex = "FFFFFF",
-                const std::string &textColorHex = "000000",
-                int borderRadius = 10, bool sameLine = true) {
+                        std::function<void()> widgets = []() {},
+                        const std::string &buttonColorHex = "FFFFFF",
+                        const std::string &textColorHex = "000000",
+                        int borderRadius = 10, bool sameLine = true) {
         // 设置按钮样式
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, borderRadius);
         ImGui::PushStyleColor(ImGuiCol_Text, HexToColor(textColorHex));
@@ -499,6 +503,66 @@ public:
         }
         return pressed;
     }
+    //复选框
+    bool CheckboxFrom(const char *label, bool *v, const std::string &width = "",
+                  const std::string &backgroundColor = "00000050",
+                  const std::string &checkedBgColor = "16b777",
+                  const std::string &uncheckedBgColor = "FFFFFF",
+                  const std::string &checkMarkColor = "FFFFFF",
+                  const std::string &textColor = "FFFFFF") {
+        ImGuiWindow *window = ImGui::GetCurrentWindow();
+        if (window->SkipItems) return false;
+        // 获取窗口宽度，若未指定宽度则使用默认宽度
+        float widthVal = 0;
+        if (!width.empty()) {
+            float parentWidth = ImGui::GetContentRegionAvail().x;
+            widthVal = ConvertToFloat(width, parentWidth);
+        } else {
+            widthVal = ImGui::GetContentRegionAvail().x;
+        }
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+        ImGuiContext &g = *ImGui::GetCurrentContext();
+        const ImGuiStyle &style = g.Style;
+        const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+        const float square_sz = ImGui::GetFrameHeight();
+        ImVec2 pos = window->DC.CursorPos;
+        draw_list->AddRectFilled(pos, ImVec2(pos.x + widthVal, pos.y + square_sz), HexToColor(backgroundColor), 0);
+        if (label_size.x > 0.0f) {
+            ImVec2 text_pos = pos;
+            ImGui::GetWindowDrawList()->AddText(text_pos, HexToColor(
+                    textColor.empty() ? "000000" : textColor), label);
+        }
+        pos = ImVec2(pos.x + widthVal, pos.y);
+        const ImRect total_bb(ImVec2(pos.x - square_sz, pos.y), ImVec2(pos.x, pos.y + square_sz));
+        ImGui::ItemSize(total_bb, style.FramePadding.y);
+        ImGui::ItemAdd(total_bb, 0);
+        if (!ImGui::ItemAdd(total_bb, 0)) return false;
+        bool hovered, held;
+        bool pressed = ImGui::ButtonBehavior(total_bb, window->GetID(label), &hovered, &held);
+        if (pressed) {
+            *v = !*v;
+            ImGui::MarkItemEdited(window->GetID(label));
+        }
+        const ImRect check_bb(pos, ImVec2(pos.x - square_sz, pos.y + square_sz));
+        ImGui::RenderNavHighlight(total_bb, window->GetID(label));
+        ImGui::RenderFrame(check_bb.Min, check_bb.Max,
+                           *v ? HexToColor(checkedBgColor.empty() ? "16b777" : checkedBgColor)
+                              : HexToColor(uncheckedBgColor.empty() ? "e2e2e2" : uncheckedBgColor),
+                           true, style.FrameRounding);
+        if (*v) {
+            const float check_sz = square_sz * 0.4f;
+            const float pad = (square_sz - check_sz) * 0.5f;
+            ImVec2 p1 = ImVec2(total_bb.Min.x + pad, total_bb.Min.y + pad);
+            ImVec2 p2 = ImVec2(total_bb.Min.x + pad + check_sz, total_bb.Min.y + pad + check_sz);
+            ImVec2 p3 = ImVec2(total_bb.Min.x + pad, total_bb.Min.y + pad + check_sz);
+            ImVec2 p4 = ImVec2(total_bb.Min.x + pad + check_sz, total_bb.Min.y + pad);
+            draw_list->AddRectFilled(p1, p2, HexToColor(
+                    checkMarkColor.empty() ? "FFFFFF" : checkMarkColor));
+            draw_list->AddRectFilled(p3, p4, HexToColor(
+                    checkMarkColor.empty() ? "FFFFFF" : checkMarkColor));
+        }
+        return pressed;
+    }
 
     // 单选框
     bool RadioButton(const char *label, int index, int *currentIndex, float height = 60.0f,
@@ -540,7 +604,7 @@ public:
     }
 
     //单选按钮组
-    void RadioGroup(const char *label, int *selectedIndex, std::vector <std::string> options,
+    void RadioGroup(const char *label, int *selectedIndex, std::vector<std::string> options,
                     const std::string &width = "", const std::string &背景颜色 = "",
                     const std::string &文本颜色 = "FFFFFF",
                     const std::string &选中颜色 = "16b777", float padding = 5.0f,
@@ -674,15 +738,94 @@ public:
         ImGui::PopID();
         return active;
     }
+    //滑块
+    bool SliderFrom(const char *label, float *value, float minValue = 0.0f, float maxValue = 10.0f, bool rect = false,
+                const std::string &backgroundColor = "00000050",
+                const std::string &progressColor = "16b777",
+                const std::string &progressBgColor = "eeeeee",
+                const std::string &textColor = "FFFFFF",
+                const std::string &width = "") {
+        ImGui::PushID(label);
+        float SliderFromHeight = 100.0f;
+        float height = 40.0f;
+        float padding = 10;
+        float lineRadius = 50;
+        // 获取窗口宽度，若未指定宽度则使用默认宽度
+        float widthVal = 0;
+        char valueStr[32];
+        snprintf(valueStr, sizeof(valueStr), "%.2f", *value);
+        if (!width.empty()) {
+            float parentWidth = ImGui::GetContentRegionAvail().x;
+            widthVal = ConvertToFloat(width, parentWidth) - padding;
+        } else {
+            widthVal = ImGui::GetContentRegionAvail().x;
+        }
+        ImGuiContext &g = *ImGui::GetCurrentContext();
+        // 获取当前光标位置
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddRectFilled(pos, ImVec2(pos.x + widthVal, pos.y + SliderFromHeight), HexToColor(backgroundColor), 0);
+        ImVec2 text_pos = ImVec2(pos.x + padding, pos.y);
+        ImGui::GetWindowDrawList()->AddText(text_pos, HexToColor(textColor.empty() ? "000000" : textColor), label);
+        ImVec2 textSizeVec = ImGui::CalcTextSize(valueStr, 0);
+        text_pos = ImVec2(text_pos.x + widthVal - textSizeVec.x - padding * 2, text_pos.y);
+        ImGui::GetWindowDrawList()->AddText(text_pos, HexToColor(textColor.empty() ? "000000" : textColor), valueStr);
+        pos = ImVec2(pos.x,pos.y + textSizeVec.y + 10 + padding);
+        float radius = height * 0.5f;
+        // 计算滑块的位置
+        float normalizedValue = (*value - minValue) / (maxValue - minValue);
+        float sliderPos = normalizedValue * widthVal;
+        ImVec2 sliderStart = ImVec2(pos.x + padding, pos.y);
+        ImVec2 sliderEnd = ImVec2(pos.x + widthVal - padding, pos.y + height * 0.25);
+        // 绘制背景
+        draw_list->AddRectFilled(sliderStart, sliderEnd, HexToColor(progressBgColor), lineRadius);
+        // 绘制进度条
+        float progressEndX = pos.x + padding + sliderPos;
+        draw_list->AddRectFilled(sliderStart, ImVec2(progressEndX, sliderStart.y + height * 0.25),
+                                 HexToColor(progressColor), lineRadius);
+        // 显示方型
+        if (rect) {
+            float rectHeight = height * 0.6;
+            ImVec2 circleCenter = ImVec2(pos.x + sliderPos - padding, pos.y + rectHeight * 0.5);
+            ImVec2 textBgSize = ImVec2(circleCenter.x, circleCenter.y - radius);
+            draw_list->AddRectFilled(ImVec2(textBgSize.x - padding, textBgSize.y - 5),
+                                     ImVec2(textBgSize.x + padding + rectHeight/2,
+                                            textBgSize.y + 5 + rectHeight),
+                                     HexToColor(progressColor), 3);
+            draw_list->AddRectFilled(ImVec2(textBgSize.x - 5, textBgSize.y),
+                                     ImVec2(textBgSize.x + 5 + rectHeight/2,
+                                            textBgSize.y + rectHeight), HexToColor("FFFFFF"), 3);
+        } else {
+            ImVec2 circleCenter = ImVec2(pos.x + sliderPos, pos.y + height * 0.15);
+            // 绘制圆形滑块
+            draw_list->AddCircleFilled(circleCenter, radius, HexToColor(progressColor));
+            draw_list->AddCircleFilled(circleCenter, radius - 5, HexToColor("FFFFFF"));
+        }
+        const ImRect total_bb(pos, ImVec2(pos.x + widthVal, pos.y + SliderFromHeight / 2 + padding));
+        ImGui::ItemSize(total_bb, 0);
+        ImGui::ItemAdd(total_bb, 0);
+        // 处理滑块逻辑
+        ImGui::InvisibleButton(label, ImVec2(widthVal, height));
+        bool hovered = ImGui::IsItemHovered();
+        bool active = ImGui::IsItemActive();
+        if (hovered || active) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        }
+        if (active) {
+            float mouseX = ImGui::GetIO().MousePos.x;
+            float newValue = minValue + (mouseX - sliderStart.x) / widthVal * (maxValue - minValue);
+            *value = newValue < minValue ? minValue : (newValue > maxValue ? maxValue : newValue);
+        }
+        ImGui::PopID();
+        return active;
+    }
 
-    bool
-    Tabs(const std::vector <std::string> &tabs, int *currentIndex, const std::string &height = "",
+    bool Tabs(const std::vector<std::string> &tabs, int *currentIndex, const std::string &height = "",
          const std::string &width = "",
-         const std::string &bgColor = "FFFFFF", const std::string &textColor = "000000",
+         const std::string &bgColor = "", const std::string &textColor = "000000",
          const std::string &activeColor = "16b777",
-         float padding = 10.0f, bool selectShowTop = false, float textSize = 30.0f) {
+         float padding = 10.0f, bool selectShowTop = false, float textSize = 30.0f,float radius = 5) {
         bool valueChanged = false;
-        float radius = 5;
         // 计算高度
         float heightVal = 0;
         if (!height.empty()) {
@@ -733,8 +876,8 @@ public:
                                          HexToColor(bgColor));
             }
             // 文本颜色
-            ImVec2 textSizeVec = ImGui::CalcTextSize2(tabs[i].c_str(), 0, textSize);
-            ImVec2 textPos = ImVec2(tab_pos.x + (tabWidth - textSizeVec.x) * 0.5f,
+            ImVec2 textSizeVec = ImGui::CalcTextSize(tabs[i].c_str(), 0, textSize);
+            ImVec2 textPos = ImVec2(tab_pos.x + (tabWidth - textSizeVec.x* 0.5f) * 0.5f,
                                     tab_pos.y + (tabHeight - textSizeVec.y) * 0.5f);
             draw_list->AddText(NULL, textSize, textPos, HexToColor(textColor), tabs[i].c_str());
             // 选中标记颜色
@@ -761,7 +904,7 @@ public:
         return valueChanged;
     }
 
-    bool VerticalTabs(const std::vector <std::string> &tabs, int *currentIndex,
+    bool VerticalTabs(const std::vector<std::string> &tabs, int *currentIndex,
                       const std::string &height = "", const std::string &width = "",
                       const std::string &bgColor = "", const std::string &textColor = "FFFFFF",
                       const std::string &activeColor = "16b777",
@@ -796,7 +939,7 @@ public:
         // 计算所有选项卡的总高度
         float totalHeight = 0.0f;
         for (int i = 0; i < tabs.size(); ++i) {
-            ImVec2 textSizeVec = ImGui::CalcTextSize2(tabs[i].c_str(), 0, textSize);
+            ImVec2 textSizeVec = ImGui::CalcTextSize(tabs[i].c_str(), 0, textSize);
             totalHeight += (tabHeight == 0.0f) ? (textSizeVec.y + padding * 2) : tabHeight;
         }
         // 如果垂直居中，调整起始位置
@@ -818,7 +961,7 @@ public:
             draw_list->AddRectFilled(tab_pos, ImVec2(tab_pos.x + tabWidth, tab_pos.y + tabHeight),
                                      HexToColor(bgColor));
             // 文本颜色
-            ImVec2 textSizeVec = ImGui::CalcTextSize2(tabs[i].c_str(), 0, textSize);
+            ImVec2 textSizeVec = ImGui::CalcTextSize(tabs[i].c_str(), 0, textSize);
             ImVec2 textPos;
             MarkerPosition markerPosition = MarkerPosition::Right;
             switch (textAlign) {
@@ -875,12 +1018,12 @@ public:
     }
 
     //开关
-    static std::vector <ToggleButtonState> toggleButtonStates;
+    static std::vector<ToggleButtonState> toggleButtonStates;
 
     bool ToggleButton(const char *label, bool *pToggle, float width = 90,
                       const std::string &selectBgColor = "16b777",
                       const std::string &unSelectBgColor = "eeeeee", float borderThickness = 5.0f) {
-        static std::map <std::string, ToggleButtonState> toggleButtonStates;
+        static std::map<std::string, ToggleButtonState> toggleButtonStates;
         if (toggleButtonStates.find(label) == toggleButtonStates.end()) {
             toggleButtonStates[label] = {0.0f};
         }
@@ -989,7 +1132,7 @@ public:
     }
 
     // 清除指定类型的动画
-    void clearFadeMap(std::initializer_list <AnimationType> types = {AnimationType::All}) {
+    void clearFadeMap(std::initializer_list<AnimationType> types = {AnimationType::All}) {
         // 遍历 fadeMap，根据类型清除对应的键
         auto it = fadeMap.begin();
         while (it != fadeMap.end()) {
@@ -1127,7 +1270,7 @@ public:
     }
 
 private:
-    std::vector <PopupInfo> popups;
+    std::vector<PopupInfo> popups;
 
     void RenderPopup(const PopupInfo &popupInfo) {
         ImVec2 windowSize = ImGui::CalcTextSize(popupInfo.content.c_str());

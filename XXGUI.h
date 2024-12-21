@@ -9,8 +9,8 @@
 #include <map>
 #include <functional>
 
-float screen_x = 1000;
-float screen_y = 400;
+float screen_x = 2400;
+float screen_y = 1080;
 ImVec2 MenuSize(1100, 600);
 ImVec2 BeginPos(0, 0);
 
@@ -200,7 +200,7 @@ public:
 
     // 自定义 Div 函数
     void Div(int gridWidth = 12, const std::string &height = "", const std::string &bgColor = "",
-             float padding = 10.0f,
+             const std::string &shadowColor = "",float shadowHeight = 100.0f,int shadowDirection = 0,float padding = 10.0f,
              int borderRadius = 0, ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar) {
         const std::string id = "Div_" + std::to_string(divCounter++);
         gridWidth = gridWidth > 0 ? gridWidth : 12;
@@ -208,6 +208,8 @@ public:
         if (gridStack.empty()) {
             gridStack.push_back({0, 0});
         }
+        // 获取父级内边距
+        ImVec2 parentPadding = ImGui::GetStyle().WindowPadding;
         GridState &currentGrid = gridStack.back();
         currentGrid.parentHeight = ImGui::GetContentRegionAvail().y;
         if (currentGrid.parentWidth == 0) {
@@ -218,7 +220,7 @@ public:
             currentGrid.currentColSum = 0;
         }
         // 计算宽度
-        float width = currentGrid.parentWidth * (gridWidth / 12.0f);
+        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - parentPadding.x;
         // 计算高度
         float heightVal = 0;
         if (!height.empty()) {
@@ -234,11 +236,37 @@ public:
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
         // 创建带滚动条的子窗口，默认不显示边框
         ImGui::BeginChild(id.c_str(), ImVec2(width, heightVal), true, flags);
+        // 获取子窗口的左上角屏幕坐标
+        ImVec2 childPos = ImGui::GetCursorScreenPos();
         ImDrawList *draw_list = ImGui::GetWindowDrawList();
         //顶部内阴影
-        draw_list->AddLine(ImVec2(currentGrid.parentWidth, currentGrid.parentHeight),
-                           ImVec2( width,currentGrid.parentHeight+15),
-                           HexToColor("f2f2f2"), 7.0f);
+        ImVec2 gradient_start = ImVec2(childPos.x - parentPadding.x, childPos.y - parentPadding.y);
+        ImVec2 gradient_end = ImVec2(childPos.x + width, childPos.y + (0==shadowHeight?heightVal:shadowHeight));
+        if(0==shadowDirection){
+            draw_list->AddRectFilledMultiColor(gradient_start, gradient_end,
+                                               HexToColor(shadowColor)& 0x00FFFFFF,
+                                               HexToColor(shadowColor),
+                                               HexToColor(shadowColor) ,
+                                               HexToColor(shadowColor) & 0x00FFFFFF);
+        }else if(1==shadowDirection){
+            draw_list->AddRectFilledMultiColor(gradient_start, gradient_end,
+                                               HexToColor(shadowColor) & 0x00FFFFFF,
+                                               HexToColor(shadowColor) & 0x00FFFFFF,
+                                               HexToColor(shadowColor),
+                                               HexToColor(shadowColor) );
+        }else if(2==shadowDirection){
+            draw_list->AddRectFilledMultiColor(gradient_start, gradient_end,
+                                               HexToColor(shadowColor),
+                                               HexToColor(shadowColor) & 0x00FFFFFF,
+                                               HexToColor(shadowColor) & 0x00FFFFFF,
+                                               HexToColor(shadowColor) );
+        }else if(3==shadowDirection){
+            draw_list->AddRectFilledMultiColor(gradient_start, gradient_end,
+                                               HexToColor(shadowColor),
+                                               HexToColor(shadowColor),
+                                               HexToColor(shadowColor) & 0x00FFFFFF,
+                                               HexToColor(shadowColor) & 0x00FFFFFF);
+        }
         // 获取当前滚动偏移量
         float &scrollOffset = scrollOffsets[id];
         // 检测内容高度是否超过窗口高度
@@ -273,6 +301,8 @@ public:
         if (gridStack.empty()) {
             gridStack.push_back({0, 0});
         }
+        // 获取父级内边距
+        ImVec2 parentPadding = ImGui::GetStyle().WindowPadding;
         GridState &currentGrid = gridStack.back();
         if (currentGrid.parentWidth == 0) {
             currentGrid.parentWidth = ImGui::GetContentRegionAvail().x;
@@ -282,7 +312,7 @@ public:
             currentGrid.currentColSum = 0;
         }
         // 计算宽度
-        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - padding * 2;
+        float width = currentGrid.parentWidth * (gridWidth / 12.0f) - parentPadding.x;
         // 计算高度
         float heightVal = 0;
         if (!height.empty()) {
@@ -409,7 +439,7 @@ public:
     // 按钮
     bool Button(const char *label = "按钮", ImVec2 size = ImVec2(0, 0),
                 const std::string &buttonColorHex = "FFFFFF", const std::string &textColorHex = "000000",
-                int borderRadius = 10, bool sameLine = true) {
+                int borderRadius = 5, bool sameLine = true) {
         // 设置按钮样式
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, borderRadius);
         ImGui::PushStyleColor(ImGuiCol_Text, HexToColor(textColorHex));
@@ -528,7 +558,7 @@ public:
         ImVec2 pos = window->DC.CursorPos;
         draw_list->AddRectFilled(pos, ImVec2(pos.x + widthVal, pos.y + square_sz), HexToColor(backgroundColor), 0);
         if (label_size.x > 0.0f) {
-            ImVec2 text_pos = pos;
+            ImVec2 text_pos = {pos.x + 10,pos.y};
             ImGui::GetWindowDrawList()->AddText(text_pos, HexToColor(
                     textColor.empty() ? "000000" : textColor), label);
         }
@@ -579,10 +609,9 @@ public:
         draw_list->AddCircle(circleCenter, radius, index == *currentIndex ? HexToColor(
                 selectedColor.empty() ? "16b777" : selectedColor) : HexToColor(
                 unselectedColor.empty() ? "777777" : unselectedColor), 0, 4.0f);
-        if (index == *currentIndex) {
+        if (index == *currentIndex)
             draw_list->AddCircleFilled(circleCenter, radius * 0.5f, HexToColor(
                     selectedColor.empty() ? "16b777" : selectedColor));
-        }
         ImGui::Dummy(ImVec2(height + padding, height + padding));
         ImVec2 textPos = ImVec2(pos.x + height + padding * 2,
                                 pos.y + (height - ImGui::CalcTextSize(label).y) * 0.5f + padding);
@@ -592,12 +621,10 @@ public:
                                              height + padding * 2));
         bool hovered = ImGui::IsItemHovered();
         bool clicked = ImGui::IsItemClicked();
-        if (hovered || clicked) {
+        if (hovered || clicked)
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        }
-        if (clicked) {
+        if (clicked)
             *currentIndex = index;
-        }
         ImGui::PopID();
         SameLineWithSpacing(10);
         return clicked;
@@ -639,10 +666,8 @@ public:
                             style.FramePadding.y * 2.0f + ImGui::GetTextLineHeight() +
                             padding * 2.0f);
         const ImVec2 bgStartPos = ImVec2(startPos.x, startPos.y);
-        ImGui::GetWindowDrawList()->AddRectFilled(bgStartPos, ImVec2(bgStartPos.x + bgSize.x,
-                                                                     bgStartPos.y + bgSize.y),
-                                                  HexToColor(
-                                                          背景颜色.empty() ? "23292e" : 背景颜色),
+        ImGui::GetWindowDrawList()->AddRectFilled(bgStartPos, ImVec2(bgStartPos.x + bgSize.x,bgStartPos.y + bgSize.y),
+                                                  HexToColor(背景颜色.empty() ? "23292e" : 背景颜色),
                                                   style.FrameRounding);
         ImGui::SetCursorScreenPos(ImVec2(bgStartPos.x + padding, bgStartPos.y + padding));
         for (int i = 0; i < numOptions; ++i) {
@@ -878,7 +903,7 @@ public:
             // 文本颜色
             ImVec2 textSizeVec = ImGui::CalcTextSize(tabs[i].c_str(), 0, textSize);
             ImVec2 textPos = ImVec2(tab_pos.x + (tabWidth - textSizeVec.x* 0.5f) * 0.5f,
-                                    tab_pos.y + (tabHeight - textSizeVec.y) * 0.5f);
+                                    tab_pos.y + (tabHeight - textSizeVec.y) * 0.5f + 10);
             draw_list->AddText(NULL, textSize, textPos, HexToColor(textColor), tabs[i].c_str());
             // 选中标记颜色
             if (i == *currentIndex) {

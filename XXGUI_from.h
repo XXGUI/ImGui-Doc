@@ -275,7 +275,7 @@ public:
         float windowHeight = heightVal;//窗口高度
         // 只有内容超过窗口高度时才禁用父窗口拖动
         if(log){
-            printf("contentHeight: %.f windowHeight：%.f\n",contentHeight,windowHeight);
+//            printf("contentHeight: %.f windowHeight：%.f\n",contentHeight,windowHeight);
         }
         if (contentHeight > 0 && contentHeight > windowHeight && ImGui::IsWindowHovered() &&
             ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
@@ -649,7 +649,7 @@ public:
                         int borderRadius = 5,
                         bool sameLine = true,
                         const std::string &borderColorHex = "000000",
-                        float borderSize = 0.01f) // 新增参数
+                        float borderSize = 0.05f) // 新增参数
     {
         if (size.x < 0)
             size = ImVec2(ImGui::GetContentRegionAvail().x, size.y);
@@ -768,7 +768,6 @@ public:
             ImGui::GetWindowDrawList()->AddText(text_pos, HexToColor(
                     textColor.empty() ? "000000" : textColor), label);
         }
-        printf("pos: %d,%d\n",pos.x,pos.y);
 
         ImGui::SetCursorScreenPos(pos);
         pos = ImVec2(pos.x + widthVal, pos.y);
@@ -1074,23 +1073,24 @@ public:
 
     //滑块
     bool SliderFrom(const char *label, float *value, float minValue = 0.0f, float maxValue = 10.0f,
-                    bool rect = false, float addValue = 0.1f,
+                    bool rect = false, float addValue = 1.0f,
                     const std::string &backgroundColor = "",
                     const std::string &progressColor = "16b777",
                     const std::string &progressBgColor = "eeeeee",
                     const std::string &textColor = "2f363c",
-                    const std::string &width = "") {
+                    const std::string &width = "",const char *snprintfm = "%.0f") {
         ImGui::PushID(label);
         float height = 40.0f;
         float padding = 10;
         float lineRadius = 50;
+        bool buttonActive = false;
 
         // 获取父级内边距
         ImVec2 parentPadding = ImGui::GetStyle().WindowPadding;
         // 获取窗口宽度，若未指定宽度则使用默认宽度
         float widthVal = 0;
         char valueStr[32];
-        snprintf(valueStr, sizeof(valueStr), "%.2f", *value);
+        snprintf(valueStr, sizeof(valueStr), snprintfm, *value);
         if (!width.empty()) {
             float parentWidth = ImGui::GetContentRegionAvail().x;
             widthVal = ConvertToFloat(width, parentWidth) - padding;
@@ -1112,30 +1112,39 @@ public:
                                             HexToColor(textColor.empty() ? "000000" : textColor),
                                             label);
 
-        // 处理valueStr显示数字
-        ImVec2 textSizeVec = ImGui::CalcTextSize(valueStr, 0);
-        textSizeVec.x = 80;
-        text_pos = ImVec2(text_pos.x + widthVal - textSizeVec.x, text_pos.y);
-        // 修改：将 + 和 - 按钮放置在滑块的左右两侧
+        // 计算文本宽度
         ImGui::PushStyleColor(ImGuiCol_Button, HexToColor(progressBgColor));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexToColor(progressBgColor));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, HexToColor(progressBgColor));
         ImGui::PushStyleColor(ImGuiCol_Text, HexToColor(textColor));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10);
-//        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::SetCursorScreenPos(
-                ImVec2(text_pos.x - textSizeVec.x - padding * 2 - 50, text_pos.y - padding));
-        if (ImGui::Button("-", {50, 50})) {
+
+        // 设定默认最小文本宽度
+        float defaultTextWidth = 150;
+        // 计算文本宽度，默认最小150
+        ImVec2 textSizeVec = ImGui::CalcTextSize(valueStr);
+        float textWidth = textSizeVec.x < defaultTextWidth ? defaultTextWidth : textSizeVec.x;
+        float btnWidth = 50; // 按钮宽度
+        float totalWidth = btnWidth * 2 + textWidth + padding * 2; // - 按钮 + 数字 + + 按钮 + 内边距
+        // 计算右对齐的起始点
+        float rightAlignX = pos.x + widthVal - totalWidth;
+        // - 按钮
+        ImGui::SetCursorScreenPos(ImVec2(rightAlignX, text_pos.y - padding));
+        if (ImGui::Button("-", ImVec2(btnWidth, 50))) {
             *value -= addValue;
             if (*value < minValue) *value = minValue;
+            buttonActive = true;
         }
-        ImGui::GetWindowDrawList()->AddText(ImVec2(text_pos.x - textSizeVec.x, text_pos.y),
-                                            HexToColor(textColor.empty() ? "000000" : textColor),
-                                            valueStr);
-        ImGui::SetCursorScreenPos(ImVec2(text_pos.x + padding * 2, text_pos.y - padding));
-        if (ImGui::Button("+", {50, 50})) {
+        // **计算数值文本的真正居中位置**
+        float valueTextX = rightAlignX + btnWidth + (textWidth - textSizeVec.x) * 0.5f;
+        ImVec2 valueTextPos = ImVec2(valueTextX, text_pos.y);
+        ImGui::GetWindowDrawList()->AddText(valueTextPos, HexToColor(textColor.empty() ? "000000" : textColor), valueStr);
+        // + 按钮
+        ImGui::SetCursorScreenPos(ImVec2(rightAlignX + btnWidth + textWidth + padding, text_pos.y - padding));
+        if (ImGui::Button("+", ImVec2(btnWidth, 50))) {
             *value += addValue;
             if (*value > maxValue) *value = maxValue;
+            buttonActive = true;
         }
 
         pos = ImVec2(pos.x, pos.y + textSizeVec.y + 10 + padding);
@@ -1193,7 +1202,7 @@ public:
         }
 
         ImGui::PopID();
-        return active;
+        return buttonActive?buttonActive:active;
     }
 
 
